@@ -1,0 +1,191 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id      String @id @default(cuid())
+  clerkId String @unique
+
+  fullName String @db.Text
+  username String @unique
+  avatar   String @db.Text
+  bio      String @db.Text
+
+  banner    String @default("") @db.Text
+  bannerKey String @default("") @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  videos           Video[]
+  reactions        VideoReaction[]
+  comments         Comment[]
+  commentReactions CommentReaction[]
+  replyComments    ReplyComment[]
+  stream           Stream?
+
+  following  Follow[] @relation(name: "Following")
+  followedBy Follow[] @relation(name: "FollowedBy")
+
+  telegram  String @default("") @db.Text
+  twitter   String @default("") @db.Text
+  facebook  String @default("") @db.Text
+  vkontakte String @default("") @db.Text
+}
+
+model Stream {
+  id           String @id @default(cuid())
+  name         String @db.Text
+  thumbnail    String @default("") @db.Text
+  thumbnailKey String @default("") @db.Text
+  description  String @default("") @db.Text
+
+  category   String @default("General") @db.Text
+  visibility String @default("Private") @db.Text
+
+  ingressId String? @unique
+  serverUrl String? @db.Text
+  streamKey String? @db.Text
+
+  isLive          Boolean @default(false)
+  isFollowersOnly Boolean @default(false)
+  isDelayed       Boolean @default(false)
+  isChatEnabled   Boolean @default(true)
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([ingressId])
+}
+
+model Video {
+  id          String @id @default(cuid())
+  title       String @db.Text
+  description String @db.Text
+  thumbnail   String @db.Text
+  videoUrl    String @db.Text
+  category    String @default("General") @db.Text
+  visibility  String @default("Private") @db.Text
+
+  videoUrlKey  String @unique
+  thumbnailKey String @default("") @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  views    Int @default(0)
+  likes    Int @default(0)
+  dislikes Int @default(0)
+
+  reactions VideoReaction[]
+  comments  Comment[]
+
+  @@index([userId])
+}
+
+model VideoReaction {
+  id String @id @default(cuid())
+
+  videoId String
+  userId  String
+
+  reaction String
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([videoId, userId])
+  @@index([videoId])
+  @@index([userId])
+}
+
+model Comment {
+  id      String @id @default(cuid())
+  content String @db.Text
+
+  videoId String
+  userId  String
+
+  likes    Int @default(0)
+  dislikes Int @default(0)
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  reactions CommentReaction[]
+  replies   ReplyComment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([videoId])
+  @@index([userId])
+}
+
+model CommentReaction {
+  id String @id @default(cuid())
+
+  commentId String
+  userId    String
+
+  reaction String
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
+}
+
+model ReplyComment {
+  id      String @id @default(cuid())
+  content String @db.Text
+
+  commentId String
+  userId    String
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([commentId])
+  @@index([userId])
+}
+
+model Follow {
+  id          String @id @default(cuid())
+  followerId  String
+  followingId String
+
+  follower  User @relation(fields: [followerId], references: [id], onDelete: Cascade, name: "Following")
+  following User @relation(fields: [followingId], references: [id], onDelete: Cascade, name: "FollowedBy")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
